@@ -1,5 +1,7 @@
 # FactStack
 
+[English](README.md) | [中文](README_zh.md)
+
 **Evidence-first RAG Q&A system for technical documentation**
 
 FactStack is a Retrieval-Augmented Generation (RAG) system designed for technical documentation and runbooks. It prioritizes **grounded answers with citations** and includes built-in **refusal logic** for cases where evidence is insufficient.
@@ -184,7 +186,19 @@ cases:
 ### Environment Variables
 
 - `LLM_PROVIDER`: `openai` or `dummy` (default: `dummy`)
+- `LLM_MODEL`: Model to use for LLM (default: `gpt-4o-mini`)
+- `EMBEDDING_MODEL`: Model to use for embeddings (default: `text-embedding-3-small`)
 - `OPENAI_API_KEY`: Required when using OpenAI
+
+Example with custom models:
+```bash
+export LLM_PROVIDER=openai
+export LLM_MODEL=gpt-4o
+export EMBEDDING_MODEL=text-embedding-3-large
+export OPENAI_API_KEY=your-key-here
+
+python -m factstack.ask --db ./db --question "How do I deploy a service?"
+```
 
 ### Prompt Configurations
 

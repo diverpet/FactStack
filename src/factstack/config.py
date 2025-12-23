@@ -70,12 +70,29 @@ class Config:
     
     @classmethod
     def from_env(cls) -> "Config":
-        """Create config from environment variables."""
+        """Create config from environment variables.
+        
+        Supported environment variables:
+        - LLM_PROVIDER: "openai" or "dummy" (default: "dummy")
+        - LLM_MODEL: Model name for LLM (default: "gpt-4o-mini")
+        - EMBEDDING_MODEL: Model name for embeddings (default: "text-embedding-3-small")
+        - OPENAI_API_KEY: Required when using OpenAI provider
+        """
         config = cls()
         
         # LLM provider from environment
         provider = os.environ.get("LLM_PROVIDER", "dummy").lower()
         config.llm.provider = provider
+        
+        # LLM model from environment
+        llm_model = os.environ.get("LLM_MODEL")
+        if llm_model:
+            config.llm.model = llm_model
+        
+        # Embedding model from environment
+        embedding_model = os.environ.get("EMBEDDING_MODEL")
+        if embedding_model:
+            config.embedding.model = embedding_model
         
         # OpenAI API key check
         if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
