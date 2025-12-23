@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+import traceback
 from pathlib import Path
 from typing import Optional, Literal
 
@@ -455,7 +456,6 @@ def main():
     
     except Exception as e:
         print(f"❌ Error: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

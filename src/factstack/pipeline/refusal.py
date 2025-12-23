@@ -7,6 +7,14 @@ from factstack.llm.schemas import ChunkInfo, AnswerResponse
 from factstack.config import RefusalConfig
 
 
+# Constants for multi-indicator refusal logic
+MIN_REFUSAL_REASONS = 2  # Minimum number of reasons to trigger refusal
+LOW_SCORE_MULTIPLIER = 0.5  # Multiplier for score threshold in severe cases
+TOP_N_AVG_THRESHOLD = 0.2  # Minimum average score for top-N chunks
+LOW_COVERAGE_THRESHOLD = 0.2  # Minimum coverage ratio
+LOW_MAX_SCORE_THRESHOLD = 0.3  # Max score below which coverage is considered
+
+
 @dataclass
 class RefusalDecision:
     """Decision about whether to refuse to answer."""
@@ -124,21 +132,21 @@ class RefusalChecker:
         # Check high-quality evidence count
         if high_quality_count < self.min_high_quality_chunks:
             # Only add as reason if other indicators are also weak
-            if top_n_avg < 0.2:
+            if top_n_avg < TOP_N_AVG_THRESHOLD:
                 refusal_reasons.append(
                     f"Insufficient high-quality evidence: {high_quality_count} chunks above threshold"
                 )
         
         # Check coverage
-        if coverage < 0.2 and max_score < 0.3:
+        if coverage < LOW_COVERAGE_THRESHOLD and max_score < LOW_MAX_SCORE_THRESHOLD:
             refusal_reasons.append(
                 f"Low coverage: only {coverage:.0%} of top results are relevant"
             )
         
         # Make final decision
         # Refuse only if multiple indicators suggest low quality
-        should_refuse = len(refusal_reasons) >= 2 or (
-            len(refusal_reasons) >= 1 and max_score < effective_threshold * 0.5
+        should_refuse = len(refusal_reasons) >= MIN_REFUSAL_REASONS or (
+            len(refusal_reasons) >= 1 and max_score < effective_threshold * LOW_SCORE_MULTIPLIER
         )
         
         if should_refuse:
