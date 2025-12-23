@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FactStack - Evidence-first RAG Q&A</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🔍</span>
+                <h1>FactStack</h1>
+            </div>
+            <p class="tagline">Evidence-first RAG Q&A for Technical Documentation</p>
+            <div class="config-info">
+                <span class="badge">LLM: {{ llm_provider }}</span>
+                <span class="badge">Model: {{ llm_model }}</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Query Section -->
+            <section class="query-section">
+                <div class="query-box">
+                    <textarea 
+                        id="question-input" 
+                        placeholder="Ask a question about your technical documentation...&#10;&#10;Examples:&#10;• How do I rollback a Kubernetes deployment?&#10;• 如何回滚部署？&#10;• What causes OOMKilled in containers?"
+                        rows="4"
+                    ></textarea>
+                    <div class="query-options">
+                        <label class="option">
+                            <input type="checkbox" id="cross-lingual" checked>
+                            <span>🌐 Cross-lingual</span>
+                        </label>
+                        <select id="translation-mode">
+                            <option value="rule">Dictionary Translation</option>
+                            <option value="llm">LLM Translation</option>
+                            <option value="off">No Translation</option>
+                        </select>
+                        <button id="ask-btn" class="btn-primary">
+                            <span class="btn-text">Ask Question</span>
+                            <span class="btn-loading" style="display:none;">⏳ Thinking...</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Answer Section -->
+            <section id="answer-section" class="answer-section" style="display:none;">
+                <div class="answer-header">
+                    <h2>📝 Answer</h2>
+                    <div class="answer-meta">
+                        <span id="query-lang" class="badge"></span>
+                        <span id="confidence" class="badge"></span>
+                    </div>
+                </div>
+                
+                <div id="answer-content" class="answer-content"></div>
+                
+                <!-- Refusal Notice -->
+                <div id="refusal-notice" class="refusal-notice" style="display:none;">
+                    <span class="refusal-icon">⚠️</span>
+                    <span id="refusal-reason"></span>
+                </div>
+                
+                <!-- Citations -->
+                <div id="citations-section" class="citations-section">
+                    <h3>📚 Citations</h3>
+                    <div id="citations-list" class="citations-list"></div>
+                </div>
+                
+                <!-- Missing Info -->
+                <div id="missing-info-section" class="missing-info-section" style="display:none;">
+                    <h3>❓ Missing Information</h3>
+                    <ul id="missing-info-list"></ul>
+                </div>
+                
+                <!-- Metadata -->
+                <div class="answer-footer">
+                    <span id="run-id" class="meta-item"></span>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section id="error-section" class="error-section" style="display:none;">
+                <div class="error-content">
+                    <span class="error-icon">❌</span>
+                    <span id="error-message"></span>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                <strong>FactStack</strong> - Evidence-first RAG Q&A System
+                <br>
+                <small>Supports cross-lingual queries (Chinese ↔ English)</small>
+            </p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

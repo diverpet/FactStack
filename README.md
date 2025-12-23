@@ -125,6 +125,30 @@ python -m factstack.eval --db ./db --eval ./tests/eval_set.yaml --prompt strict
 python -m factstack.eval --db ./db --eval ./tests/eval_set.yaml --output ./results.json
 ```
 
+### Web UI
+
+FactStack includes a web interface for interactive Q&A:
+
+```bash
+# Start the web server
+python -m factstack.web --db ./db
+
+# With custom host and port
+python -m factstack.web --db ./db --host 0.0.0.0 --port 8080
+
+# Enable debug mode
+python -m factstack.web --db ./db --debug
+```
+
+Then open http://localhost:5000 in your browser.
+
+**Features:**
+- 🎨 Clean, modern UI
+- 🌐 Cross-lingual query support (Chinese ↔ English)
+- 📊 Real-time confidence scores
+- 📚 Citation display with source highlighting
+- ⚠️ Refusal explanation when evidence is insufficient
+
 ## Output Format
 
 ### Answer Structure

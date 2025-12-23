@@ -136,6 +136,30 @@ python -m factstack.eval --db ./db --eval ./tests/eval_set.yaml --prompt strict
 python -m factstack.eval --db ./db --eval ./tests/eval_set.yaml --output ./results.json
 ```
 
+### Web 界面
+
+FactStack 提供交互式 Web 界面：
+
+```bash
+# 启动 Web 服务器
+python -m factstack.web --db ./db
+
+# 自定义主机和端口
+python -m factstack.web --db ./db --host 0.0.0.0 --port 8080
+
+# 启用调试模式
+python -m factstack.web --db ./db --debug
+```
+
+然后在浏览器中打开 http://localhost:5000。
+
+**功能特性：**
+- 🎨 简洁现代的界面
+- 🌐 跨语言查询支持（中文 ↔ 英文）
+- 📊 实时置信度评分
+- 📚 引用展示与来源高亮
+- ⚠️ 证据不足时的拒答说明
+
 ## 输出格式
 
 ### 答案结构
