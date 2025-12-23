@@ -1,7 +1,7 @@
 """Refusal logic for FactStack."""
 
-from typing import List, Tuple, Optional
-from dataclasses import dataclass
+from typing import List, Tuple, Optional, Dict, Any
+from dataclasses import dataclass, field
 
 from factstack.llm.schemas import ChunkInfo, AnswerResponse
 from factstack.config import RefusalConfig
@@ -14,6 +14,7 @@ class RefusalDecision:
     reason: str
     confidence_adjustment: float = 0.0
     missing_info: List[str] = None
+    indicators: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
         if self.missing_info is None:
@@ -21,61 +22,138 @@ class RefusalDecision:
 
 
 class RefusalChecker:
-    """Checks whether the system should refuse to answer."""
+    """Checks whether the system should refuse to answer.
     
-    def __init__(self, config: RefusalConfig):
+    Uses multi-indicator based refusal logic:
+    - Top-N average score and coverage
+    - Minimum high-quality evidence count
+    - Score distribution analysis
+    """
+    
+    def __init__(self, config: RefusalConfig, min_high_quality_chunks: int = 2):
         """Initialize refusal checker.
         
         Args:
             config: Refusal configuration
+            min_high_quality_chunks: Minimum number of high-quality chunks required
         """
         self.config = config
+        self.min_high_quality_chunks = min_high_quality_chunks
+        # High quality threshold (chunks above this are considered good evidence)
+        self.high_quality_threshold = 0.25
     
     def check_pre_answer(
         self,
-        chunks: List[ChunkInfo]
+        chunks: List[ChunkInfo],
+        cross_lingual_stats: Optional[Dict[str, Any]] = None
     ) -> RefusalDecision:
         """Check if we should refuse before generating answer.
         
+        Uses multi-indicator based refusal:
+        1. Checks if there are enough chunks
+        2. Checks top-N average score
+        3. Checks number of high-quality evidence chunks
+        4. Considers cross-lingual retrieval results if available
+        
         Args:
             chunks: Retrieved and ranked chunks
+            cross_lingual_stats: Optional stats from cross-lingual retrieval
         
         Returns:
             RefusalDecision
         """
+        indicators = {}
+        
         if not chunks:
             return RefusalDecision(
                 should_refuse=True,
                 reason="No relevant evidence found in the knowledge base",
-                missing_info=["Any relevant documentation for this query"]
+                missing_info=["Any relevant documentation for this query"],
+                indicators={"no_chunks": True}
             )
+        
+        # Calculate indicators
+        max_score = max(c.final_score for c in chunks)
+        top_n = min(5, len(chunks))
+        top_n_scores = [c.final_score for c in chunks[:top_n]]
+        top_n_avg = sum(top_n_scores) / len(top_n_scores)
+        
+        # Count high-quality chunks
+        high_quality_count = sum(
+            1 for c in chunks if c.final_score >= self.high_quality_threshold
+        )
+        
+        # Coverage: what percentage of top-5 are above threshold
+        coverage = high_quality_count / top_n if top_n > 0 else 0
+        
+        indicators = {
+            "max_score": max_score,
+            "top_n_avg": top_n_avg,
+            "high_quality_count": high_quality_count,
+            "coverage": coverage,
+            "total_chunks": len(chunks)
+        }
+        
+        # Add cross-lingual stats if available
+        if cross_lingual_stats:
+            indicators["cross_lingual"] = cross_lingual_stats
+            # If translated channel had better results, boost confidence
+            if cross_lingual_stats.get("translation_used"):
+                indicators["translation_boosted"] = True
+        
+        # Multi-indicator refusal decision
+        refusal_reasons = []
         
         # Check minimum chunks requirement
         if len(chunks) < self.config.min_chunks_required:
-            return RefusalDecision(
-                should_refuse=True,
-                reason=f"Insufficient evidence: only {len(chunks)} chunk(s) found, "
-                       f"minimum {self.config.min_chunks_required} required",
-                missing_info=["More relevant documents to support the answer"]
+            refusal_reasons.append(
+                f"Insufficient chunks: {len(chunks)} < {self.config.min_chunks_required}"
             )
         
-        # Check score threshold
-        max_score = max(c.final_score for c in chunks)
-        avg_score = sum(c.final_score for c in chunks) / len(chunks)
+        # Check if max score is too low (but use lower threshold for cross-lingual)
+        effective_threshold = self.config.min_score_threshold
+        if cross_lingual_stats and cross_lingual_stats.get("translation_used"):
+            # Be more lenient when translation was used
+            effective_threshold *= 0.8
         
-        if max_score < self.config.min_score_threshold:
+        if max_score < effective_threshold:
+            refusal_reasons.append(
+                f"Best score too low: {max_score:.3f} < {effective_threshold:.3f}"
+            )
+        
+        # Check high-quality evidence count
+        if high_quality_count < self.min_high_quality_chunks:
+            # Only add as reason if other indicators are also weak
+            if top_n_avg < 0.2:
+                refusal_reasons.append(
+                    f"Insufficient high-quality evidence: {high_quality_count} chunks above threshold"
+                )
+        
+        # Check coverage
+        if coverage < 0.2 and max_score < 0.3:
+            refusal_reasons.append(
+                f"Low coverage: only {coverage:.0%} of top results are relevant"
+            )
+        
+        # Make final decision
+        # Refuse only if multiple indicators suggest low quality
+        should_refuse = len(refusal_reasons) >= 2 or (
+            len(refusal_reasons) >= 1 and max_score < effective_threshold * 0.5
+        )
+        
+        if should_refuse:
             return RefusalDecision(
                 should_refuse=True,
-                reason=f"Low relevance scores: best match score {max_score:.2f} "
-                       f"is below threshold {self.config.min_score_threshold}",
+                reason="; ".join(refusal_reasons),
                 confidence_adjustment=-0.3,
-                missing_info=["Higher quality matches for this query"]
+                missing_info=["Higher quality matches for this query"],
+                indicators=indicators
             )
         
         # Check for potential conflicts (high variance in scores among top chunks)
         if len(chunks) >= 2:
-            top_scores = [c.final_score for c in chunks[:3]]
-            score_variance = self._calculate_variance(top_scores)
+            score_variance = self._calculate_variance(top_n_scores)
+            indicators["score_variance"] = score_variance
             
             if score_variance > self.config.conflict_threshold:
                 return RefusalDecision(
@@ -83,13 +161,15 @@ class RefusalChecker:
                     reason=f"High variance in relevance scores suggests potential "
                            f"conflicting information (variance: {score_variance:.2f})",
                     confidence_adjustment=-0.2,
-                    missing_info=["Clarification on which context is most relevant"]
+                    missing_info=["Clarification on which context is most relevant"],
+                    indicators=indicators
                 )
         
         # No refusal needed
         return RefusalDecision(
             should_refuse=False,
-            reason="Sufficient evidence found"
+            reason="Sufficient evidence found",
+            indicators=indicators
         )
     
     def check_post_answer(

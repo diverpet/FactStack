@@ -11,6 +11,7 @@ FactStack 是一个专为技术文档和 Runbook 设计的检索增强生成（R
 - 📚 **证据优先回答**: 所有答案都基于检索到的文档，并带有明确的引用标记
 - 🚫 **拒答逻辑**: 当证据不足时，系统会明确拒绝回答，避免幻觉
 - 🔍 **混合检索**: 结合向量搜索（语义）和 BM25（关键词）以获得更好的召回率
+- 🌐 **跨语言检索**: 支持用中文提问英文文档，采用双通道检索
 - 📊 **重排序**: 多阶段管道，通过重排序提高精确度
 - 📝 **完整追踪**: 为每次查询生成 JSONL 追踪日志，记录管道各阶段的时间
 - 🧪 **内置评测**: 评测框架，包含召回率、引用精确度和拒答准确率等指标
@@ -222,6 +223,99 @@ python -m factstack.ask --db ./db --question "如何部署服务？"
 2. **明确的不确定性**: 当证据不足时，系统会明确表示
 3. **完整可追踪**: 每个管道阶段都有日志记录，便于调试
 4. **评测驱动**: 内置评测确保长期质量
+
+## 跨语言检索
+
+### 问题描述
+
+当用中文（或其他 CJK 语言）提问英文文档时，传统 RAG 系统往往会失败，原因包括：
+
+1. **嵌入空间不匹配**: 中文查询的嵌入向量与英文文档嵌入向量对齐不佳
+2. **关键词不匹配**: BM25/关键词搜索在查询和文档使用不同语言时失效
+
+这会导致非常低的相关性得分（如 ~0.01），即使存在相关文档也会触发拒答。
+
+### 解决方案：双通道检索
+
+FactStack 实现了双通道检索方案：
+
+1. **查询语言检测**: 自动检测查询是否包含 CJK 字符
+2. **查询翻译**: 将非英文查询翻译为检索友好的英文关键词
+3. **双通道检索**: 使用原始查询和翻译后的查询并行搜索
+4. **多路召回合并**: 合并两个通道的结果，按 chunk_id 去重
+5. **统一重排序**: 对合并后的结果进行重排序
+
+### 使用示例
+
+**中文提问英文文档：**
+
+```bash
+# 用中文提问
+python -m factstack.ask --db ./db --question "如何回滚部署？"
+
+# 输出：
+# QueryLang=zh, CrossLingual=True, Translation=rule
+# 翻译后的查询："rollback deploy deployment"
+# 引用来自 deployment_runbook.md
+```
+
+**关闭跨语言检索：**
+
+```bash
+python -m factstack.ask --db ./db --question "如何回滚部署？" --cross-lingual off
+```
+
+**控制翻译模式：**
+
+```bash
+# 使用 LLM 翻译（需要 API key）
+python -m factstack.ask --db ./db --question "如何回滚部署？" --translation-mode llm
+
+# 使用基于规则的词典翻译（无需 API key）
+python -m factstack.ask --db ./db --question "如何回滚部署？" --translation-mode rule
+
+# 关闭翻译
+python -m factstack.ask --db ./db --question "如何回滚部署？" --translation-mode off
+```
+
+### CLI 参数
+
+| 参数 | 可选值 | 默认值 | 说明 |
+|------|--------|--------|------|
+| `--cross-lingual` | `on`, `off` | `on` | 启用双通道检索 |
+| `--translate` | `on`, `off` | `on` | 启用查询翻译 |
+| `--translation-mode` | `llm`, `rule`, `off` | `llm` | 翻译方法 |
+| `--topk` | 整数 | 8 | 每个检索通道的文档块数 |
+| `--rerank-topk` | 整数 | 5 | 重排序后的文档块数 |
+
+### 翻译模式
+
+- **`llm`**: 使用配置的 LLM 进行翻译（最佳质量，需要 API key）
+- **`rule`**: 使用内置中英词典（无需 API key，可离线使用）
+- **`off`**: 完全关闭翻译
+
+当设置 `--translation-mode llm` 但没有可用的 API key 时，系统会自动降级到 `rule` 模式。
+
+### 跨语言追踪字段
+
+追踪日志包含跨语言检索的额外字段：
+
+```json
+{"stage": "language_detect", "metadata": {"query_language": "zh", "needs_translation": true}}
+{"stage": "query_translate", "metadata": {"original_query": "如何回滚部署？", "translated_query": "rollback deploy deployment", "translation_mode": "rule"}}
+{"stage": "dual_retrieval", "metadata": {"original_query": "...", "translated_query": "...", "total_candidates": 12, "multi_channel_hits": 3}}
+```
+
+### 多指标拒答
+
+拒答逻辑使用多个指标而非仅依赖最高分数：
+
+- **Top-N 平均分**: 前 5 个文档块的平均分数
+- **高质量证据数量**: 超过质量阈值的文档块数量
+- **覆盖率**: 相关结果在前几名中的占比
+- **跨语言加成**: 当使用翻译时采用更宽松的阈值
+
+这可以防止在跨语言检索通过翻译通道找到相关文档时出现误拒答。
 
 ## 许可证
 

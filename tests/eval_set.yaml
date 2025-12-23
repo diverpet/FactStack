@@ -145,3 +145,40 @@ cases:
     difficulty: medium
     should_refuse: false
     tags: ["java", "memory", "containers"]
+
+  # Cross-lingual test cases (Chinese queries against English documents)
+  - question: "如何回滚部署？"
+    expected_sources:
+      - "deployment_runbook"
+    expected_answer_contains:
+      - "rollback"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "deployment", "chinese"]
+
+  - question: "Kubernetes Pod 崩溃循环怎么排查？"
+    expected_sources:
+      - "kubernetes_pod_troubleshooting"
+    expected_answer_contains:
+      - "CrashLoopBackOff"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "kubernetes", "chinese"]
+
+  - question: "数据库连接池配置建议是什么？"
+    expected_sources:
+      - "database_connection_pools"
+    expected_answer_contains:
+      - "pool"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "database", "chinese"]
+
+  - question: "内存泄漏如何诊断？"
+    expected_sources:
+      - "memory_troubleshooting"
+    expected_answer_contains:
+      - "memory"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "memory", "chinese"]
