@@ -21,9 +21,9 @@ def split_into_sentences(text: str) -> List[str]:
 
 def generate_chunk_id(source_path: str, chunk_index: int) -> str:
     """Generate a stable chunk ID based on file path and index."""
-    # Create a hash-based stable ID
+    # Create a hash-based stable ID using SHA-256
     content = f"{source_path}:{chunk_index}"
-    hash_val = hashlib.md5(content.encode()).hexdigest()[:8]
+    hash_val = hashlib.sha256(content.encode()).hexdigest()[:8]
     # Create readable ID
     clean_path = re.sub(r'[^\w]', '_', source_path)
     return f"{clean_path}_{chunk_index}_{hash_val}"

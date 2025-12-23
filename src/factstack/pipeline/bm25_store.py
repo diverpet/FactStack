@@ -65,7 +65,12 @@ class BM25Store:
             from rank_bm25 import BM25Okapi
             self._bm25 = BM25Okapi(self._tokenized_corpus)
         except ImportError:
-            # Fallback to simple TF-IDF-like scoring
+            # Fallback to simple TF-IDF-like scoring if rank_bm25 is not available
+            import logging
+            logging.warning(
+                "rank_bm25 not available, falling back to simple keyword matching. "
+                "Install rank_bm25 for better search quality: pip install rank-bm25"
+            )
             self._bm25 = None
     
     def search(self, query: str, top_k: int = 10) -> List[ChunkInfo]:

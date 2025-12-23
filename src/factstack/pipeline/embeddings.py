@@ -41,8 +41,11 @@ class EmbeddingGenerator:
         if self.llm is not None:
             try:
                 return self.llm.get_embeddings(texts)
-            except (NotImplementedError, Exception):
-                pass
+            except NotImplementedError:
+                pass  # Expected when LLM doesn't support embeddings
+            except Exception as e:
+                import logging
+                logging.warning(f"LLM embedding generation failed: {e}, using fallback")
         
         # Fallback to simple hash-based embeddings
         return self._generate_hash_embeddings(texts)

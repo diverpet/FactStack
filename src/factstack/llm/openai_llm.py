@@ -7,6 +7,9 @@ from typing import List, Optional
 from factstack.llm.base import BaseLLM
 from factstack.llm.schemas import AnswerResponse, ChunkInfo, Citation
 
+# Constants
+TEXT_TRUNCATION_LENGTH = 200  # Maximum characters for text truncation in citations
+
 
 class OpenAILLM(BaseLLM):
     """OpenAI-based LLM implementation.
@@ -96,7 +99,7 @@ Evidence (use [C1], [C2], etc. to cite):
                     citations.append(Citation(
                         chunk_id=chunk.chunk_id,
                         source=chunk.source_path,
-                        text=chunk.text[:200],
+                        text=chunk.text[:TEXT_TRUNCATION_LENGTH],
                         score=chunk.final_score
                     ))
             
@@ -107,7 +110,7 @@ Evidence (use [C1], [C2], etc. to cite):
                         citations.append(Citation(
                             chunk_id=cit.get("chunk_id", ""),
                             source=cit.get("source", ""),
-                            text=cit.get("text", "")[:200],
+                            text=cit.get("text", "")[:TEXT_TRUNCATION_LENGTH],
                             score=cit.get("score", 0.0)
                         ))
             

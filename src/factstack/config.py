@@ -26,9 +26,10 @@ class ChunkingConfig:
 class RetrievalConfig:
     """Retrieval configuration."""
     top_k: int = 8
-    vector_weight: float = 0.3  # Lower weight for hash-based embeddings
-    bm25_weight: float = 0.7    # Higher weight for keyword matching
+    vector_weight: float = 0.3  # Lower weight when using hash-based (dummy) embeddings
+    bm25_weight: float = 0.7    # Higher weight for keyword matching (works better with dummy LLM)
     rerank_top_k: int = 5
+    # Note: When using real embeddings (OpenAI), consider using vector_weight=0.7, bm25_weight=0.3
 
 
 @dataclass
