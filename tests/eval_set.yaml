@@ -1,0 +1,184 @@
+# FactStack Evaluation Set
+# This file contains test cases for evaluating the RAG system
+
+cases:
+  # Easy cases - direct answers in single document
+  - question: "How do I check Kubernetes pod logs?"
+    expected_sources:
+      - "kubernetes_pod_troubleshooting"
+    expected_answer_contains:
+      - "kubectl logs"
+    difficulty: easy
+    should_refuse: false
+    tags: ["kubernetes", "debugging"]
+
+  - question: "What is the recommended max pool size for a medium application?"
+    expected_sources:
+      - "database_connection_pools"
+    expected_answer_contains:
+      - "20"
+    difficulty: easy
+    should_refuse: false
+    tags: ["database", "configuration"]
+
+  - question: "What is a SEV1 incident?"
+    expected_sources:
+      - "incident_response"
+    expected_answer_contains:
+      - "Critical"
+      - "outage"
+    difficulty: easy
+    should_refuse: false
+    tags: ["incident", "sre"]
+
+  # Medium cases - require understanding context
+  - question: "How do I rollback a Kubernetes deployment?"
+    expected_sources:
+      - "deployment_runbook"
+    expected_answer_contains:
+      - "kubectl rollout undo"
+    difficulty: medium
+    should_refuse: false
+    tags: ["kubernetes", "deployment"]
+
+  - question: "What causes OOMKilled in Kubernetes?"
+    expected_sources:
+      - "kubernetes_pod_troubleshooting"
+      - "memory_troubleshooting"
+    expected_answer_contains:
+      - "memory"
+      - "limit"
+    difficulty: medium
+    should_refuse: false
+    tags: ["kubernetes", "memory"]
+
+  - question: "How do I diagnose high network latency?"
+    expected_sources:
+      - "network_latency_troubleshooting"
+    expected_answer_contains:
+      - "ping"
+      - "traceroute"
+    difficulty: medium
+    should_refuse: false
+    tags: ["network", "debugging"]
+
+  - question: "What should I do after resolving an incident?"
+    expected_sources:
+      - "incident_response"
+    expected_answer_contains:
+      - "post-mortem"
+    difficulty: medium
+    should_refuse: false
+    tags: ["incident", "process"]
+
+  # Hard cases - require synthesizing from multiple sources
+  - question: "How should I troubleshoot a slow application that's also running out of memory?"
+    expected_sources:
+      - "memory_troubleshooting"
+      - "network_latency_troubleshooting"
+    expected_answer_contains:
+      - "memory"
+    difficulty: hard
+    should_refuse: false
+    tags: ["debugging", "performance"]
+
+  - question: "What are the steps to deploy a service and then roll it back if there are issues?"
+    expected_sources:
+      - "deployment_runbook"
+    expected_answer_contains:
+      - "deploy"
+      - "rollback"
+    difficulty: hard
+    should_refuse: false
+    tags: ["deployment", "operations"]
+
+  # Cases that should trigger refusal or uncertainty
+  - question: "How do I configure AWS Lambda functions?"
+    expected_sources: []
+    expected_answer_contains: []
+    difficulty: easy
+    should_refuse: true
+    tags: ["out-of-scope"]
+
+  - question: "What is the stock price of Google?"
+    expected_sources: []
+    expected_answer_contains: []
+    difficulty: easy
+    should_refuse: true
+    tags: ["out-of-scope"]
+
+  - question: "How do I fix connection pool issues while also handling memory leaks?"
+    expected_sources:
+      - "database_connection_pools"
+      - "memory_troubleshooting"
+    expected_answer_contains:
+      - "connection"
+    difficulty: hard
+    should_refuse: false
+    tags: ["database", "memory"]
+
+  # Additional cases for comprehensive coverage
+  - question: "What command shows PostgreSQL current connections?"
+    expected_sources:
+      - "database_connection_pools"
+    expected_answer_contains:
+      - "pg_stat_activity"
+    difficulty: medium
+    should_refuse: false
+    tags: ["database", "postgresql"]
+
+  - question: "How do I debug DNS resolution issues in Kubernetes?"
+    expected_sources:
+      - "kubernetes_pod_troubleshooting"
+    expected_answer_contains:
+      - "CoreDNS"
+      - "nslookup"
+    difficulty: medium
+    should_refuse: false
+    tags: ["kubernetes", "network", "dns"]
+
+  - question: "What are the recommended JVM heap settings for containers?"
+    expected_sources:
+      - "memory_troubleshooting"
+    expected_answer_contains:
+      - "MaxRAMPercentage"
+    difficulty: medium
+    should_refuse: false
+    tags: ["java", "memory", "containers"]
+
+  # Cross-lingual test cases (Chinese queries against English documents)
+  - question: "如何回滚部署？"
+    expected_sources:
+      - "deployment_runbook"
+    expected_answer_contains:
+      - "rollback"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "deployment", "chinese"]
+
+  - question: "Kubernetes Pod 崩溃循环怎么排查？"
+    expected_sources:
+      - "kubernetes_pod_troubleshooting"
+    expected_answer_contains:
+      - "CrashLoopBackOff"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "kubernetes", "chinese"]
+
+  - question: "数据库连接池配置建议是什么？"
+    expected_sources:
+      - "database_connection_pools"
+    expected_answer_contains:
+      - "pool"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "database", "chinese"]
+
+  - question: "内存泄漏如何诊断？"
+    expected_sources:
+      - "memory_troubleshooting"
+    expected_answer_contains:
+      - "memory"
+    difficulty: medium
+    should_refuse: false
+    tags: ["cross-lingual", "memory", "chinese"]
